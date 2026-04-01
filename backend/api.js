@@ -9,14 +9,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 Serve images
 app.use("/uploads", express.static("uploads"));
 
 const upload = multer({ dest: "uploads/" });
 
-/* ================= USER ================= */
-
-// ✅ consistent lowercase
 app.post("/register", async (req, res) => {
   const response = await axios.post("http://localhost:3001/register", req.body);
   res.json(response.data);
@@ -27,20 +23,14 @@ app.post("/login", async (req, res) => {
   res.json(response.data);
 });
 
-/* ================= PRODUCT ================= */
-
-// ✅ Forward multer properly
 app.post("/addProduct", upload.single("image"), async (req, res) => {
   try {
     const formData = new FormData();
-
     formData.append("name", req.body.name);
     formData.append("price", req.body.price);
-
     if (req.file) {
       formData.append("image", fs.createReadStream(req.file.path));
     }
-
     const response = await axios.post(
       "http://localhost:3002/add-product",
       formData,
