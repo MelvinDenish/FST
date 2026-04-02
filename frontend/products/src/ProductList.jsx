@@ -9,11 +9,10 @@ function ProductList() {
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
   const [image, setImage] = useState(null)
-
   const userId = localStorage.getItem("userId")
 
  const loadProducts = async () => {
-  const res = await axios.get("http://localhost:3000/getProducts")
+  const res = await axios.get("http://localhost:3000/product/getProducts")
   setProducts(res.data)
 }
 
@@ -22,7 +21,23 @@ function ProductList() {
   }, [])
 
   const addToCart = (p) => {
-    setCart([...cart, p])
+    const existingItem = cart.find(item => item._id === p._id)
+    
+    if (existingItem) {
+      // If product exists, increase count
+      setCart(cart.map(item =>
+        item._id === p._id
+          ? { ...item, count: item.count + 1 }
+          : item
+      ))
+    } else {
+      // If product doesn't exist, add with count 1
+      setCart([...cart, { ...p, count: 1 }])
+    }
+  }
+
+  const calculateTotal = () => {
+    return cart.reduce((total, item) => total + (item.price * item.count), 0)
   }
 
   const addProduct = async () => {
@@ -31,7 +46,7 @@ function ProductList() {
     formData.append("price", price)
     formData.append("image", image)
 
-    await axios.post("http://localhost:3000/addProduct", formData)
+    await axios.post("http://localhost:3000/product/add-product", formData)
 
     alert("Product added")
     loadProducts()
@@ -45,13 +60,18 @@ function ProductList() {
 
       {/* CART */}
       {showCart && (
-        <ul>
-          {cart.map((c, i) => (
-            <li key={i}>
-              {c.name} - ₹{c.price}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul>
+            {cart.map((c, i) => (
+              <li key={i}>
+                {c.name} - ₹{c.price} x {c.count} = ₹{c.price * c.count}
+              </li>
+            ))}
+          </ul>
+          {cart.length > 0 && (
+            <h3>Total: ₹{calculateTotal()}</h3>
+          )}
+        </>
       )}
 
       {/* ADD PRODUCT */}

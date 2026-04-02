@@ -15,11 +15,12 @@ function Login({ setPage }) {
 
       <button onClick={async () => {
         try {
-          const res = await axios.post("http://localhost:3000/login", {
+          const res = await axios.post("http://localhost:3000/user/login", {
             email,
             password: pwd
           })
 
+        console.log(res);
           if (res.data.user) {
             localStorage.setItem("userId", res.data.user._id)
             setPage("products")

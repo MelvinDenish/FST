@@ -14,7 +14,7 @@ function Register({ setPage }) {
       <input value={pwd} onChange={(e) => setPwd(e.target.value)} />
 
       <button onClick={async () => {
-        await axios.post("http://localhost:3000/register", {
+        await axios.post("http://localhost:3000/user/register", {
           email,
           password: pwd
         })
