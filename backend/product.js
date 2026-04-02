@@ -7,7 +7,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 serve images
 app.use("/uploads", express.static("uploads"));
 
 mongoose.connect("mongodb://127.0.0.1/productDB");
@@ -28,12 +27,11 @@ const Product = mongoose.model("Product", {
 });
 
 app.post("/add-product", upload.single("image"), async (req, res) => {
-  const qty = Number(req.body.quantity) || 0
 
   const product = await Product.create({
     name: req.body.name,
     price: Number(req.body.price) || 0,
-    quantity: qty,
+    quantity: Number(req.body.quantity) || 0,
     image: req.file ? req.file.filename : null
   });
   res.json(product);
