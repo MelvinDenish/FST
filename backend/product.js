@@ -23,13 +23,15 @@ const upload = multer({ storage });
 const Product = mongoose.model("Product", {
   name: String,
   price: Number,
-  image: String
+  image: String,
+  quantity: { type: Number, default: 0 }
 });
 
 app.post("/add-product", upload.single("image"), async (req, res) => {
   const product = await Product.create({
     name: req.body.name,
     price: req.body.price,
+    quantity: req.body.quantity,
     image: req.file ? req.file.filename : null
   });
   res.json(product);
@@ -38,6 +40,20 @@ app.post("/add-product", upload.single("image"), async (req, res) => {
 app.get("/getProducts", async (req, res) => {
   const products = await Product.find();
   res.json(products);
+});
+
+app.post("/reduce-quantity", async (req, res) => {
+  const { productId, quantity } = req.body;
+  try {
+    const product = await Product.findByIdAndUpdate(
+      productId,
+      { $inc: { quantity: -quantity } },
+      { new: true }
+    );
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update quantity" });
+  }
 });
 
 app.listen(3002, () => console.log("Product Service running"));
