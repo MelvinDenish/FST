@@ -11,12 +11,7 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 app.use("/user", proxy("http://localhost:3001")
 );
-app.use("/product", proxy("http://localhost:3002", {
-  proxyReqPathResolver: (req) => {
-    return req.originalUrl.replace("/product", "");
-  }
-})
-);
+app.use("/product", proxy("http://localhost:3002"));
 
 app.listen(3000, () => {
   console.log("Gateway running on port 3000");
