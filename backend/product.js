@@ -28,10 +28,12 @@ const Product = mongoose.model("Product", {
 });
 
 app.post("/add-product", upload.single("image"), async (req, res) => {
+  const qty = Number(req.body.quantity) || 0
+
   const product = await Product.create({
     name: req.body.name,
-    price: req.body.price,
-    quantity: req.body.quantity,
+    price: Number(req.body.price) || 0,
+    quantity: qty,
     image: req.file ? req.file.filename : null
   });
   res.json(product);
