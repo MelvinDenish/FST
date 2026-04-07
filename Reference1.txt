@@ -1,0 +1,432 @@
+content = """
+// REAL-WORLD REACT SINGLE FILE EXAMPLE
+// Demonstrates:
+// - API calls (axios)
+// - Authentication (login)
+// - Token storage
+// - Fetching data
+// - Image upload
+// - Routing
+// - Protected routes
+// - Form handling
+// - useState, useEffect, useContext
+// Backend assumed: Express + MongoDB API
+
+import React, {
+  useState,
+  useEffect,
+  createContext,
+  useContext
+} from "react";
+
+import axios from "axios";
+
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate
+} from "react-router-dom";
+
+// =======================================
+// CONTEXT FOR AUTH
+// =======================================
+
+const AuthContext = createContext();
+
+function useAuth() {
+  return useContext(AuthContext);
+}
+
+function AuthProvider({ children }) {
+
+  const [user, setUser] = useState(
+    localStorage.getItem("user")
+  );
+
+  const login = (userData, token) => {
+    localStorage.setItem("token", token);
+    localStorage.setItem(
+      "user",
+      JSON.stringify(userData)
+    );
+    setUser(userData);
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ user, login, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// =======================================
+// AXIOS INSTANCE
+// =======================================
+
+const api = axios.create({
+  baseURL: "http://localhost:5000/api"
+});
+
+api.interceptors.request.use(config => {
+  const token =
+    localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization =
+      `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// =======================================
+// LOGIN PAGE
+// =======================================
+
+function Login() {
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const { login } = useAuth();
+
+  const navigate = useNavigate();
+
+  const handleSubmit = async e => {
+
+    e.preventDefault();
+
+    try {
+
+      const res =
+        await api.post(
+          "/auth/login",
+          {
+            email,
+            password
+          }
+        );
+
+      login(
+        res.data.user,
+        res.data.token
+      );
+
+      navigate("/dashboard");
+
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={e =>
+          setEmail(e.target.value)
+        }
+      />
+
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={e =>
+          setPassword(e.target.value)
+        }
+      />
+
+      <button type="submit">
+        Login
+      </button>
+
+    </form>
+  );
+}
+
+// =======================================
+// DASHBOARD WITH DATA FETCH
+// =======================================
+
+function Dashboard() {
+
+  const [items, setItems] =
+    useState([]);
+
+  const { logout } =
+    useAuth();
+
+  useEffect(() => {
+
+    fetchItems();
+
+  }, []);
+
+  const fetchItems =
+    async () => {
+
+      try {
+
+        const res =
+          await api.get(
+            "/items"
+          );
+
+        setItems(res.data);
+
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+  return (
+
+    <div>
+
+      <h2>Dashboard</h2>
+
+      <button
+        onClick={logout}
+      >
+        Logout
+      </button>
+
+      <ul>
+
+        {items.map(item => (
+
+          <li key={item._id}>
+
+            {item.name}
+
+          </li>
+
+        ))}
+
+      </ul>
+
+      <UploadImage />
+
+    </div>
+  );
+}
+
+// =======================================
+// IMAGE UPLOAD COMPONENT
+// =======================================
+
+function UploadImage() {
+
+  const [file, setFile] =
+    useState(null);
+
+  const [preview, setPreview] =
+    useState(null);
+
+  const handleChange =
+    e => {
+
+      const selected =
+        e.target.files[0];
+
+      // Validate size (2MB)
+
+      if (
+        selected.size >
+        2 * 1024 * 1024
+      ) {
+
+        alert(
+          "File too large"
+        );
+
+        return;
+      }
+
+      setFile(selected);
+
+      // Preview
+
+      setPreview(
+        URL.createObjectURL(
+          selected
+        )
+      );
+    };
+
+  const handleUpload =
+    async () => {
+
+      if (!file) return;
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "image",
+        file
+      );
+
+      try {
+
+        await api.post(
+          "/upload",
+          formData,
+          {
+            headers: {
+              "Content-Type":
+              "multipart/form-data"
+            }
+          }
+        );
+
+        alert("Uploaded");
+
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+  return (
+
+    <div>
+
+      <h3>
+        Upload Image
+      </h3>
+
+      <input
+        type="file"
+        onChange={handleChange}
+      />
+
+      {preview && (
+
+        <img
+          src={preview}
+          alt="preview"
+          width="150"
+        />
+
+      )}
+
+      <button
+        onClick={handleUpload}
+      >
+        Upload
+      </button>
+
+    </div>
+  );
+}
+
+// =======================================
+// PROTECTED ROUTE
+// =======================================
+
+function PrivateRoute({
+  children
+}) {
+
+  const { user } =
+    useAuth();
+
+  if (!user) {
+
+    return (
+      <Navigate to="/login" />
+    );
+
+  }
+
+  return children;
+}
+
+// =======================================
+// MAIN APP ROUTING
+// =======================================
+
+function AppRoutes() {
+
+  return (
+
+    <Routes>
+
+      <Route
+        path="/login"
+        element={<Login />}
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+
+          <PrivateRoute>
+
+            <Dashboard />
+
+          </PrivateRoute>
+
+        }
+      />
+
+      <Route
+        path="*"
+        element={
+          <Navigate to="/login" />
+        }
+      />
+
+    </Routes>
+
+  );
+}
+
+// =======================================
+// ROOT APP
+// =======================================
+
+function App() {
+
+  return (
+
+    <BrowserRouter>
+
+      <AuthProvider>
+
+        <AppRoutes />
+
+      </AuthProvider>
+
+    </BrowserRouter>
+
+  );
+}
+
+export default App;
+
+"""
+
+file_path = "/mnt/data/react_real_world_single_file.jsx"
+
+with open(file_path, "w") as f:
+    f.write(content)
+
+file_path
