@@ -1,0 +1,459 @@
+content = """
+// REAL-WORLD BACKEND SINGLE FILE (Express + MongoDB + JWT + Image Upload)
+// Features:
+// - MongoDB connection (Mongoose)
+// - User authentication (JWT)
+// - Password hashing (bcrypt)
+// - Protected routes
+// - CRUD operations
+// - Image upload (multer)
+// - Static file serving
+// - Token middleware
+
+const express = require("express");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const path = require("path");
+const cors = require("cors");
+
+const app = express();
+
+// ===============================
+// MIDDLEWARE
+// ===============================
+
+app.use(cors());
+app.use(express.json());
+
+// Serve uploaded images
+app.use("/uploads",
+  express.static(
+    path.join(__dirname, "uploads")
+  )
+);
+
+// ===============================
+// DATABASE CONNECTION
+// ===============================
+
+mongoose.connect(
+  "mongodb://127.0.0.1:27017/appdb"
+)
+.then(() =>
+  console.log("MongoDB Connected")
+)
+.catch(err =>
+  console.log(err)
+);
+
+// ===============================
+// USER SCHEMA
+// ===============================
+
+const userSchema =
+new mongoose.Schema({
+
+  name: {
+    type: String,
+    required: true
+  },
+
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+
+  password: {
+    type: String,
+    required: true
+  }
+
+}, { timestamps: true });
+
+const User =
+mongoose.model(
+  "User",
+  userSchema
+);
+
+// ===============================
+// ITEM SCHEMA
+// ===============================
+
+const itemSchema =
+new mongoose.Schema({
+
+  name: String,
+
+  image: String,
+
+  userId: {
+    type:
+      mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  }
+
+}, { timestamps: true });
+
+const Item =
+mongoose.model(
+  "Item",
+  itemSchema
+);
+
+// ===============================
+// JWT AUTH MIDDLEWARE
+// ===============================
+
+function authMiddleware(
+  req,
+  res,
+  next
+) {
+
+  const token =
+    req.headers.authorization
+    ?.split(" ")[1];
+
+  if (!token) {
+
+    return res
+      .status(401)
+      .json({
+        message:
+        "No token"
+      });
+
+  }
+
+  try {
+
+    const decoded =
+      jwt.verify(
+        token,
+        "secretkey"
+      );
+
+    req.user =
+      decoded;
+
+    next();
+
+  } catch {
+
+    res.status(401)
+    .json({
+      message:
+      "Invalid token"
+    });
+
+  }
+}
+
+// ===============================
+// MULTER IMAGE UPLOAD
+// ===============================
+
+const storage =
+multer.diskStorage({
+
+  destination:
+    function(req, file, cb) {
+
+      cb(
+        null,
+        "uploads/"
+      );
+
+    },
+
+  filename:
+    function(req, file, cb) {
+
+      cb(
+        null,
+        Date.now() +
+        path.extname(
+          file.originalname
+        )
+      );
+
+    }
+
+});
+
+const upload =
+multer({ storage });
+
+// ===============================
+// AUTH ROUTES
+// ===============================
+
+// REGISTER
+
+app.post(
+  "/api/auth/register",
+  async (req, res) => {
+
+    try {
+
+      const {
+        name,
+        email,
+        password
+      } = req.body;
+
+      const hashed =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      const user =
+        await User.create({
+
+          name,
+          email,
+          password: hashed
+
+        });
+
+      res.json(user);
+
+    } catch (err) {
+
+      res.status(500)
+      .json(err);
+
+    }
+
+  }
+);
+
+// LOGIN
+
+app.post(
+  "/api/auth/login",
+  async (req, res) => {
+
+    try {
+
+      const {
+        email,
+        password
+      } = req.body;
+
+      const user =
+        await User.findOne({
+          email
+        });
+
+      if (!user) {
+
+        return res
+        .status(400)
+        .json({
+          message:
+          "User not found"
+        });
+
+      }
+
+      const match =
+        await bcrypt.compare(
+          password,
+          user.password
+        );
+
+      if (!match) {
+
+        return res
+        .status(400)
+        .json({
+          message:
+          "Invalid password"
+        });
+
+      }
+
+      const token =
+        jwt.sign({
+
+          id: user._id
+
+        }, "secretkey");
+
+      res.json({
+
+        user,
+        token
+
+      });
+
+    } catch (err) {
+
+      res.status(500)
+      .json(err);
+
+    }
+
+  }
+);
+
+// ===============================
+// ITEM ROUTES
+// ===============================
+
+// CREATE ITEM WITH IMAGE
+
+app.post(
+  "/api/items",
+  authMiddleware,
+  upload.single("image"),
+  async (req, res) => {
+
+    try {
+
+      const item =
+        await Item.create({
+
+          name:
+            req.body.name,
+
+          image:
+            req.file
+            ?.filename,
+
+          userId:
+            req.user.id
+
+        });
+
+      res.json(item);
+
+    } catch (err) {
+
+      res.status(500)
+      .json(err);
+
+    }
+
+  }
+);
+
+// GET ITEMS
+
+app.get(
+  "/api/items",
+  authMiddleware,
+  async (req, res) => {
+
+    try {
+
+      const items =
+        await Item.find()
+        .populate("userId");
+
+      res.json(items);
+
+    } catch (err) {
+
+      res.status(500)
+      .json(err);
+
+    }
+
+  }
+);
+
+// UPDATE ITEM
+
+app.put(
+  "/api/items/:id",
+  authMiddleware,
+  async (req, res) => {
+
+    try {
+
+      const item =
+        await Item
+        .findByIdAndUpdate(
+
+          req.params.id,
+
+          {
+            name:
+            req.body.name
+          },
+
+          { new: true }
+
+        );
+
+      res.json(item);
+
+    } catch (err) {
+
+      res.status(500)
+      .json(err);
+
+    }
+
+  }
+);
+
+// DELETE ITEM
+
+app.delete(
+  "/api/items/:id",
+  authMiddleware,
+  async (req, res) => {
+
+    try {
+
+      await Item
+      .findByIdAndDelete(
+        req.params.id
+      );
+
+      res.json({
+        message:
+        "Deleted"
+      });
+
+    } catch (err) {
+
+      res.status(500)
+      .json(err);
+
+    }
+
+  }
+);
+
+// ===============================
+// SERVER START
+// ===============================
+
+app.listen(
+  5000,
+  () => {
+
+    console.log(
+      "Server running on port 5000"
+    );
+
+  }
+);
+
+"""
+
+file_path = "/mnt/data/backend_real_world_single_file.js"
+
+with open(file_path, "w") as f:
+    f.write(content)
+
+file_path
