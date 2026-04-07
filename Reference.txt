@@ -1,0 +1,909 @@
+content = """
+COMPLETE MONGOOSE FUNCTIONS REFERENCE
+(With Syntax and Usage)
+
+==================================================
+1. CONNECTION FUNCTIONS
+
+mongoose.connect()
+mongoose.connect(uri, options);
+
+Example:
+await mongoose.connect("mongodb://127.0.0.1:27017/mydb");
+
+mongoose.disconnect()
+await mongoose.disconnect();
+
+mongoose.connection.on()
+mongoose.connection.on("connected", callback);
+mongoose.connection.on("error", callback);
+
+==================================================
+2. SCHEMA FUNCTIONS
+
+mongoose.Schema()
+
+const schema = new mongoose.Schema({
+  name: { type: String, required: true },
+  age: { type: Number },
+}, { timestamps: true });
+
+schema.add()
+schema.add({ email: String });
+
+schema.index()
+schema.index({ email: 1 });
+
+schema.pre()
+schema.pre("save", function(next) {
+  next();
+});
+
+schema.post()
+schema.post("save", function(doc) {
+  console.log(doc);
+});
+
+schema.virtual()
+
+schema.virtual("fullName").get(function() {
+  return this.name;
+});
+
+schema.methods
+
+schema.methods.sayHello = function() {
+  return "Hello";
+};
+
+schema.statics
+
+schema.statics.findByEmail = function(email) {
+  return this.findOne({ email });
+};
+
+==================================================
+3. MODEL FUNCTIONS
+
+mongoose.model()
+
+const User = mongoose.model("User", schema);
+
+==================================================
+4. CREATE FUNCTIONS
+
+Model.create()
+
+await User.create({
+  name: "John"
+});
+
+Model.insertMany()
+
+await User.insertMany([
+  { name: "A" },
+  { name: "B" }
+]);
+
+document.save()
+
+const user = new User({
+  name: "John"
+});
+
+await user.save();
+
+==================================================
+5. READ FUNCTIONS
+
+Model.find()
+
+await User.find();
+
+Model.findOne()
+
+await User.findOne({ name: "John" });
+
+Model.findById()
+
+await User.findById(id);
+
+Model.exists()
+
+await User.exists({ email: "a@gmail.com" });
+
+Model.countDocuments()
+
+await User.countDocuments();
+
+Model.estimatedDocumentCount()
+
+await User.estimatedDocumentCount();
+
+==================================================
+QUERY CHAIN FUNCTIONS
+
+.select()
+
+User.find().select("name email");
+
+.limit()
+
+User.find().limit(5);
+
+.skip()
+
+User.find().skip(10);
+
+.sort()
+
+User.find().sort({ age: -1 });
+
+.populate()
+
+User.find().populate("posts");
+
+.lean()
+
+User.find().lean();
+
+.exec()
+
+User.find().exec();
+
+==================================================
+6. UPDATE FUNCTIONS
+
+Model.updateOne()
+
+await User.updateOne(
+  { name: "John" },
+  { $set: { age: 30 } }
+);
+
+Model.updateMany()
+
+await User.updateMany(
+  { role: "user" },
+  { $set: { active: true } }
+);
+
+Model.replaceOne()
+
+await User.replaceOne(
+  { name: "John" },
+  { name: "New" }
+);
+
+Model.findByIdAndUpdate()
+
+await User.findByIdAndUpdate(
+  id,
+  { $set: { age: 40 } },
+  { new: true }
+);
+
+Model.findOneAndUpdate()
+
+await User.findOneAndUpdate(
+  { name: "John" },
+  { $inc: { age: 1 } }
+);
+
+==================================================
+7. DELETE FUNCTIONS
+
+Model.deleteOne()
+
+await User.deleteOne({ name: "John" });
+
+Model.deleteMany()
+
+await User.deleteMany({ role: "user" });
+
+Model.findByIdAndDelete()
+
+await User.findByIdAndDelete(id);
+
+Model.findOneAndDelete()
+
+await User.findOneAndDelete({ name: "John" });
+
+==================================================
+8. DOCUMENT FUNCTIONS
+
+document.remove()
+
+await user.remove();
+
+document.deleteOne()
+
+await user.deleteOne();
+
+document.updateOne()
+
+await user.updateOne({
+  $set: { age: 30 }
+});
+
+==================================================
+9. POPULATION FUNCTIONS
+
+.populate()
+
+await User.find()
+.populate("posts");
+
+==================================================
+10. TRANSACTION FUNCTIONS
+
+mongoose.startSession()
+
+const session = await mongoose.startSession();
+
+session.startTransaction();
+
+await User.create([
+  { name: "John" }
+], { session });
+
+await session.commitTransaction();
+
+await session.abortTransaction();
+
+==================================================
+11. AGGREGATE FUNCTION
+
+Model.aggregate()
+
+await User.aggregate([
+  { $match: { age: { $gt: 18 } } },
+  { $group: {
+      _id: "$role",
+      total: { $sum: 1 }
+  }}
+]);
+
+==================================================
+AGGREGATE PIPELINE STAGES
+
+$match
+
+{ $match: { age: { $gt: 18 } } }
+
+$group
+
+{
+  $group: {
+    _id: "$role",
+    count: { $sum: 1 }
+  }
+}
+
+$project
+
+{
+  $project: {
+    name: 1,
+    age: 1
+  }
+}
+
+$sort
+
+{ $sort: { age: -1 } }
+
+$limit
+
+{ $limit: 5 }
+
+$skip
+
+{ $skip: 10 }
+
+$lookup
+
+{
+  $lookup: {
+    from: "orders",
+    localField: "_id",
+    foreignField: "userId",
+    as: "orders"
+  }
+}
+
+$unwind
+
+{ $unwind: "$orders" }
+
+$addFields
+
+{
+  $addFields: {
+    total: 100
+  }
+}
+
+$count
+
+{ $count: "totalUsers" }
+
+$facet
+
+{
+  $facet: {
+    data: [ { $match: {} } ]
+  }
+}
+
+$replaceRoot
+
+{
+  $replaceRoot: {
+    newRoot: "$doc"
+  }
+}
+
+$bucket
+
+{
+  $bucket: {
+    groupBy: "$age",
+    boundaries: [0,20,40,60]
+  }
+}
+
+$sample
+
+{ $sample: { size: 5 } }
+
+$out
+
+{ $out: "newCollection" }
+
+$merge
+
+{
+  $merge: {
+    into: "targetCollection"
+  }
+}
+
+==================================================
+AGGREGATE ACCUMULATORS
+
+$sum
+
+{ total: { $sum: 1 } }
+
+$avg
+
+{ avgAge: { $avg: "$age" } }
+
+$min
+
+{ minAge: { $min: "$age" } }
+
+$max
+
+{ maxAge: { $max: "$age" } }
+
+$push
+
+{ list: { $push: "$name" } }
+
+$addToSet
+
+{ list: { $addToSet: "$name" } }
+
+$first
+
+{ firstValue: { $first: "$name" } }
+
+$last
+
+{ lastValue: { $last: "$name" } }
+
+==================================================
+QUERY OPERATORS
+
+$gt
+$gte
+$lt
+$lte
+$ne
+$in
+$nin
+$or
+$and
+$not
+$exists
+$regex
+
+Example:
+
+User.find({
+  age: { $gte: 18, $lte: 30 }
+});
+
+==================================================
+MOST IMPORTANT (CORE)
+
+mongoose.connect()
+mongoose.Schema()
+mongoose.model()
+Model.create()
+Model.find()
+Model.findOne()
+Model.findById()
+Model.updateOne()
+Model.findByIdAndUpdate()
+Model.deleteOne()
+Model.findByIdAndDelete()
+Model.populate()
+Model.aggregate()
+
+==================================================
+END OF COMPLETE REFERENCE
+"""
+
+file_path = "/mnt/data/mongoose_complete_functions_reference.txt"
+
+with open(file_path, "w") as f:
+    f.write(content)
+
+file_pathcontent = """
+COMPLETE MONGOOSE FUNCTIONS REFERENCE
+(With Syntax and Usage)
+
+==================================================
+1. CONNECTION FUNCTIONS
+
+mongoose.connect()
+mongoose.connect(uri, options);
+
+Example:
+await mongoose.connect("mongodb://127.0.0.1:27017/mydb");
+
+mongoose.disconnect()
+await mongoose.disconnect();
+
+mongoose.connection.on()
+mongoose.connection.on("connected", callback);
+mongoose.connection.on("error", callback);
+
+==================================================
+2. SCHEMA FUNCTIONS
+
+mongoose.Schema()
+
+const schema = new mongoose.Schema({
+  name: { type: String, required: true },
+  age: { type: Number },
+}, { timestamps: true });
+
+schema.add()
+schema.add({ email: String });
+
+schema.index()
+schema.index({ email: 1 });
+
+schema.pre()
+schema.pre("save", function(next) {
+  next();
+});
+
+schema.post()
+schema.post("save", function(doc) {
+  console.log(doc);
+});
+
+schema.virtual()
+
+schema.virtual("fullName").get(function() {
+  return this.name;
+});
+
+schema.methods
+
+schema.methods.sayHello = function() {
+  return "Hello";
+};
+
+schema.statics
+
+schema.statics.findByEmail = function(email) {
+  return this.findOne({ email });
+};
+
+==================================================
+3. MODEL FUNCTIONS
+
+mongoose.model()
+
+const User = mongoose.model("User", schema);
+
+==================================================
+4. CREATE FUNCTIONS
+
+Model.create()
+
+await User.create({
+  name: "John"
+});
+
+Model.insertMany()
+
+await User.insertMany([
+  { name: "A" },
+  { name: "B" }
+]);
+
+document.save()
+
+const user = new User({
+  name: "John"
+});
+
+await user.save();
+
+==================================================
+5. READ FUNCTIONS
+
+Model.find()
+
+await User.find();
+
+Model.findOne()
+
+await User.findOne({ name: "John" });
+
+Model.findById()
+
+await User.findById(id);
+
+Model.exists()
+
+await User.exists({ email: "a@gmail.com" });
+
+Model.countDocuments()
+
+await User.countDocuments();
+
+Model.estimatedDocumentCount()
+
+await User.estimatedDocumentCount();
+
+==================================================
+QUERY CHAIN FUNCTIONS
+
+.select()
+
+User.find().select("name email");
+
+.limit()
+
+User.find().limit(5);
+
+.skip()
+
+User.find().skip(10);
+
+.sort()
+
+User.find().sort({ age: -1 });
+
+.populate()
+
+User.find().populate("posts");
+
+.lean()
+
+User.find().lean();
+
+.exec()
+
+User.find().exec();
+
+==================================================
+6. UPDATE FUNCTIONS
+
+Model.updateOne()
+
+await User.updateOne(
+  { name: "John" },
+  { $set: { age: 30 } }
+);
+
+Model.updateMany()
+
+await User.updateMany(
+  { role: "user" },
+  { $set: { active: true } }
+);
+
+Model.replaceOne()
+
+await User.replaceOne(
+  { name: "John" },
+  { name: "New" }
+);
+
+Model.findByIdAndUpdate()
+
+await User.findByIdAndUpdate(
+  id,
+  { $set: { age: 40 } },
+  { new: true }
+);
+
+Model.findOneAndUpdate()
+
+await User.findOneAndUpdate(
+  { name: "John" },
+  { $inc: { age: 1 } }
+);
+
+==================================================
+7. DELETE FUNCTIONS
+
+Model.deleteOne()
+
+await User.deleteOne({ name: "John" });
+
+Model.deleteMany()
+
+await User.deleteMany({ role: "user" });
+
+Model.findByIdAndDelete()
+
+await User.findByIdAndDelete(id);
+
+Model.findOneAndDelete()
+
+await User.findOneAndDelete({ name: "John" });
+
+==================================================
+8. DOCUMENT FUNCTIONS
+
+document.remove()
+
+await user.remove();
+
+document.deleteOne()
+
+await user.deleteOne();
+
+document.updateOne()
+
+await user.updateOne({
+  $set: { age: 30 }
+});
+
+==================================================
+9. POPULATION FUNCTIONS
+
+.populate()
+
+await User.find()
+.populate("posts");
+
+==================================================
+10. TRANSACTION FUNCTIONS
+
+mongoose.startSession()
+
+const session = await mongoose.startSession();
+
+session.startTransaction();
+
+await User.create([
+  { name: "John" }
+], { session });
+
+await session.commitTransaction();
+
+await session.abortTransaction();
+
+==================================================
+11. AGGREGATE FUNCTION
+
+Model.aggregate()
+
+await User.aggregate([
+  { $match: { age: { $gt: 18 } } },
+  { $group: {
+      _id: "$role",
+      total: { $sum: 1 }
+  }}
+]);
+
+==================================================
+AGGREGATE PIPELINE STAGES
+
+$match
+
+{ $match: { age: { $gt: 18 } } }
+
+$group
+
+{
+  $group: {
+    _id: "$role",
+    count: { $sum: 1 }
+  }
+}
+
+$project
+
+{
+  $project: {
+    name: 1,
+    age: 1
+  }
+}
+
+$sort
+
+{ $sort: { age: -1 } }
+
+$limit
+
+{ $limit: 5 }
+
+$skip
+
+{ $skip: 10 }
+
+$lookup
+
+{
+  $lookup: {
+    from: "orders",
+    localField: "_id",
+    foreignField: "userId",
+    as: "orders"
+  }
+}
+
+$unwind
+
+{ $unwind: "$orders" }
+
+$addFields
+
+{
+  $addFields: {
+    total: 100
+  }
+}
+
+$count
+
+{ $count: "totalUsers" }
+
+$facet
+
+{
+  $facet: {
+    data: [ { $match: {} } ]
+  }
+}
+
+$replaceRoot
+
+{
+  $replaceRoot: {
+    newRoot: "$doc"
+  }
+}
+
+$bucket
+
+{
+  $bucket: {
+    groupBy: "$age",
+    boundaries: [0,20,40,60]
+  }
+}
+
+$sample
+
+{ $sample: { size: 5 } }
+
+$out
+
+{ $out: "newCollection" }
+
+$merge
+
+{
+  $merge: {
+    into: "targetCollection"
+  }
+}
+
+==================================================
+AGGREGATE ACCUMULATORS
+
+$sum
+
+{ total: { $sum: 1 } }
+
+$avg
+
+{ avgAge: { $avg: "$age" } }
+
+$min
+
+{ minAge: { $min: "$age" } }
+
+$max
+
+{ maxAge: { $max: "$age" } }
+
+$push
+
+{ list: { $push: "$name" } }
+
+$addToSet
+
+{ list: { $addToSet: "$name" } }
+
+$first
+
+{ firstValue: { $first: "$name" } }
+
+$last
+
+{ lastValue: { $last: "$name" } }
+
+==================================================
+QUERY OPERATORS
+
+$gt
+$gte
+$lt
+$lte
+$ne
+$in
+$nin
+$or
+$and
+$not
+$exists
+$regex
+
+Example:
+
+User.find({
+  age: { $gte: 18, $lte: 30 }
+});
+
+==================================================
+MOST IMPORTANT (CORE)
+
+mongoose.connect()
+mongoose.Schema()
+mongoose.model()
+Model.create()
+Model.find()
+Model.findOne()
+Model.findById()
+Model.updateOne()
+Model.findByIdAndUpdate()
+Model.deleteOne()
+Model.findByIdAndDelete()
+Model.populate()
+Model.aggregate()
+
+==================================================
+END OF COMPLETE REFERENCE
+"""
+
+file_path = "/mnt/data/mongoose_complete_functions_reference.txt"
+
+with open(file_path, "w") as f:
+    f.write(content)
+
+file_path
